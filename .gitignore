@@ -8,7 +8,6 @@ __pycache__/
 dist/
 build/
 .uv/
-uv.lock
 
 # Environment and secrets
 .env
