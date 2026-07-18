@@ -73,6 +73,20 @@ button.secondary {
 .hero,
 .panel-header,
 .hero-actions,
+.filter-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.filter-notice p {
+  margin: 0;
+}
+
 .filters-actions,
 .view-tabs {
   display: flex;

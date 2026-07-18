@@ -438,7 +438,7 @@ class RepoCollector:
             )
             security.dependabot_security_updates_enabled = fixes is not None and fixes.get("enabled", False)
         except GitHubAPIError as exc:
-            if exc.status_code != 404:
+            if exc.status_code not in {403, 404}:
                 errors.append(f"dependabot_security_updates: {exc}")
 
         try:
@@ -451,7 +451,8 @@ class RepoCollector:
             security.secret_scanning_enabled = secret.get("status") == "enabled"
             security.secret_scanning_push_protection_enabled = secret_push.get("status") == "enabled"
         except GitHubAPIError as exc:
-            errors.append(f"security_and_analysis: {exc}")
+            if exc.status_code not in {403, 404}:
+                errors.append(f"security_and_analysis: {exc}")
 
         try:
             code_scanning = self.client.get_json(

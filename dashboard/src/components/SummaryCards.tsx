@@ -29,6 +29,14 @@ export function SummaryCards({ repos, allRepos, summary, draftView, onCardClick 
 
   const publicCount = allRepos.filter((repo) => !repo.is_private).length;
   const privateCount = allRepos.filter((repo) => repo.is_private).length;
+  const sourceBreakdown = allRepos.reduce<Record<string, number>>((acc, repo) => {
+    acc[repo.source_name] = (acc[repo.source_name] ?? 0) + 1;
+    return acc;
+  }, {});
+  const sourceHint = Object.entries(sourceBreakdown)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, count]) => `${name}: ${count}`)
+    .join(" · ");
 
   return (
     <section className="cards-grid">
@@ -42,7 +50,10 @@ export function SummaryCards({ repos, allRepos, summary, draftView, onCardClick 
       >
         <p className="card-label">Visible repos</p>
         <p className="card-value">{repos.length === allRepos.length ? counts.all : `${repos.length} / ${counts.all}`}</p>
-        <p className="card-hint">{summary.total_repositories} total in run · Public / Private: {publicCount} / {privateCount}</p>
+        <p className="card-hint">
+          {summary.total_repositories} total in run · {sourceHint || "No sources"}
+        </p>
+        <p className="card-hint">Public / Private: {publicCount} / {privateCount}</p>
       </article>
 
       {SUMMARY_CARDS.filter((card) => card.id !== "all").map((card) => (

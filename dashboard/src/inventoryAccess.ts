@@ -105,7 +105,7 @@ export async function loadPlainInventory(): Promise<InventorySnapshot> {
 }
 
 export async function loadEncryptedInventory(password: string): Promise<InventorySnapshot> {
-  const response = await fetch(`${import.meta.env.BASE_URL}inventory.enc.json`);
+  const response = await fetch(`${import.meta.env.BASE_URL}inventory.enc.json`, { cache: "no-store" });
   if (!response.ok) {
     throw new Error("Encrypted inventory not found. Redeploy the dashboard.");
   }

@@ -16,7 +16,7 @@ import { RepoTable } from "./components/RepoTable";
 import { SummaryCards } from "./components/SummaryCards";
 import { FilterBar } from "./components/FilterBar";
 import { LoginGate } from "./components/LoginGate";
-import { DEFAULT_VIEWS, loadViews, saveViews } from "./savedViews";
+import { DEFAULT_VIEWS, loadViews, sanitizeView, saveViews } from "./savedViews";
 import { SummaryCardId, activeCardForView, viewForCard } from "./cardFilters";
 import {
   AuthRequiredError,
@@ -98,8 +98,8 @@ export default function App() {
   const [needsAuth, setNeedsAuth] = useState(false);
   const [passwordProtected, setPasswordProtected] = useState(false);
   const [views, setViews] = useState<SavedView[]>(() => loadViews());
-  const [activeViewId, setActiveViewId] = useState(DEFAULT_VIEWS[0].id);
-  const [draftView, setDraftView] = useState<SavedView>(DEFAULT_VIEWS[0]);
+  const [activeViewId, setActiveViewId] = useState(() => loadViews()[0]?.id ?? DEFAULT_VIEWS[0].id);
+  const [draftView, setDraftView] = useState<SavedView>(() => loadViews()[0] ?? DEFAULT_VIEWS[0]);
 
   useEffect(() => {
     if (encryptedInventoryMode) {
@@ -194,8 +194,15 @@ export default function App() {
   function selectView(id: string) {
     const view = views.find((item) => item.id === id);
     if (!view) return;
+    const nextView = sanitizeView(view);
     setActiveViewId(id);
-    setDraftView(view);
+    setDraftView(nextView);
+  }
+
+  function resetFilters() {
+    const nextView = sanitizeView(DEFAULT_VIEWS[0]);
+    setActiveViewId(nextView.id);
+    setDraftView(nextView);
   }
 
   function updateDraft(patch: Partial<SavedView>) {
@@ -283,6 +290,8 @@ export default function App() {
     return <div className="page loading">Loading inventory…</div>;
   }
 
+  const filtersActive = filtered.length !== snapshot.repositories.length;
+
   return (
     <div className="page">
       <header className="hero">
@@ -312,6 +321,18 @@ export default function App() {
         draftView={draftView}
         onCardClick={applyCardFilter}
       />
+
+      {filtersActive ? (
+        <section className="panel filter-notice">
+          <p>
+            Showing {filtered.length} of {snapshot.repositories.length} repositories.
+            {draftView.source !== "all" ? ` Source filter: ${draftView.source}.` : ""}
+          </p>
+          <button type="button" className="secondary" onClick={resetFilters}>
+            Reset filters
+          </button>
+        </section>
+      ) : null}
 
       <section className="charts-grid">
         <article className="panel chart-panel">

@@ -8,7 +8,7 @@ export function loadViews(): SavedView[] {
     if (!raw) return DEFAULT_VIEWS;
     const parsed = JSON.parse(raw) as SavedView[];
     if (!parsed.length) return DEFAULT_VIEWS;
-    return parsed.map((view) => ({ ...DEFAULT_VIEWS[0], ...view }));
+    return parsed.map((view) => sanitizeView({ ...DEFAULT_VIEWS[0], ...view }));
   } catch {
     return DEFAULT_VIEWS;
   }
@@ -16,6 +16,13 @@ export function loadViews(): SavedView[] {
 
 export function saveViews(views: SavedView[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(views));
+}
+
+export function sanitizeView(view: SavedView): SavedView {
+  if (view.id !== "all" || view.source === "all") {
+    return view;
+  }
+  return { ...view, source: "all" };
 }
 
 export const DEFAULT_VIEWS: SavedView[] = [
