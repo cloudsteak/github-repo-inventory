@@ -20,6 +20,7 @@ from github_repo_inventory.export import (
     export_json,
     export_run_snapshot,
     load_json_snapshot,
+    publish_dashboard_files,
 )
 from github_repo_inventory.github_client import GitHubClient
 from github_repo_inventory.models import InventorySnapshot
@@ -96,7 +97,9 @@ def sync(ctx: click.Context) -> None:
         db = InventoryDatabase(config.storage.database)
         db.save_snapshot(snapshot)
         export_json(snapshot, config.storage.json_export)
+        export_csv(snapshot.repositories, config.storage.csv_export)
         run_path = export_run_snapshot(snapshot, config.storage.runs_dir)
+        published = _publish_dashboard(config)
 
     console.print(
         f"[green]Done.[/green] {summary.successful_repositories} ok, "
@@ -107,7 +110,21 @@ def sync(ctx: click.Context) -> None:
         for error in summary.errors:
             console.print(f"  - {error}")
     console.print(f"JSON export: {config.storage.json_export}")
+    console.print(f"CSV export: {config.storage.csv_export}")
     console.print(f"Run snapshot: {run_path}")
+    for path in published:
+        console.print(f"Dashboard copy: {path}")
+
+
+def _publish_dashboard(config) -> list[Path]:
+    if not config.storage.auto_publish_dashboard:
+        return []
+    return publish_dashboard_files(
+        json_source=config.storage.json_export,
+        dashboard_json=config.storage.dashboard_json,
+        csv_source=config.storage.csv_export,
+        dashboard_csv=config.storage.dashboard_csv,
+    )
 
 
 @main.command("list-runs")
@@ -151,11 +168,12 @@ def export(ctx: click.Context, run_id: str | None, csv_path: Path | None) -> Non
         raise click.ClickException("No inventory snapshot found. Run `sync` first.")
 
     export_json(snapshot, config.storage.json_export)
+    export_csv(snapshot.repositories, csv_path or config.storage.csv_export)
     console.print(f"Exported JSON to {config.storage.json_export}")
+    console.print(f"Exported CSV to {csv_path or config.storage.csv_export}")
 
-    if csv_path:
-        export_csv(snapshot.repositories, csv_path)
-        console.print(f"Exported CSV to {csv_path}")
+    for path in _publish_dashboard(config):
+        console.print(f"Dashboard copy: {path}")
 
 
 @main.command()

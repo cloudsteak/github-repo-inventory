@@ -47,3 +47,6 @@ htmlcov/
 
 # Logs
 *.log
+**/inventory.csv
+**/inventory.json
+**/inventory.csv

@@ -28,8 +28,16 @@ storage:
   # JSON export path consumed by the dashboard
   json_export: data/inventory.json
 
+  # CSV export path
+  csv_export: data/inventory.csv
+
   # Directory for timestamped run snapshots (used for diff)
   runs_dir: data/runs
+
+  # After sync/export, copy artifacts for local dashboard preview/build
+  auto_publish_dashboard: true
+  dashboard_json: dashboard/public/inventory.json
+  dashboard_csv: dashboard/public/inventory.csv
 
 sync:
   # Max concurrent per-repo detail requests (respect GitHub rate limits)
@@ -48,4 +56,4 @@ scoring:
     archived: 25
     no_branch_protection: 20
     open_dependabot_prs: 10
-    no_security_features: 15
+    open_secret_scanning_alerts: 15

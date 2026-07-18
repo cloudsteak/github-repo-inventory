@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import shutil
 from pathlib import Path
 
 from github_repo_inventory.models import InventorySnapshot, RepoInventoryRecord
@@ -107,3 +108,26 @@ def export_csv(repositories: list[RepoInventoryRecord], path: Path) -> None:
 
 def load_json_snapshot(path: Path) -> InventorySnapshot:
     return InventorySnapshot.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def publish_dashboard_files(
+    *,
+    json_source: Path,
+    dashboard_json: Path,
+    csv_source: Path | None = None,
+    dashboard_csv: Path | None = None,
+) -> list[Path]:
+    """Copy inventory exports to dashboard paths for local preview/build."""
+    copied: list[Path] = []
+
+    if json_source.exists():
+        dashboard_json.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(json_source, dashboard_json)
+        copied.append(dashboard_json)
+
+    if csv_source and dashboard_csv and csv_source.exists():
+        dashboard_csv.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(csv_source, dashboard_csv)
+        copied.append(dashboard_csv)
+
+    return copied

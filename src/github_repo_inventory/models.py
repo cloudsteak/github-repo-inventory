@@ -41,6 +41,7 @@ class SecurityFeatures(BaseModel):
     secret_scanning_push_protection_enabled: bool | None = None
     code_scanning_enabled: bool | None = None
     advanced_security_enabled: bool | None = None
+    open_secret_scanning_alert_count: int | None = None
 
 
 class TeamAccess(BaseModel):
@@ -60,6 +61,13 @@ class MergeSettings(BaseModel):
     allow_squash_merge: bool = True
     allow_rebase_merge: bool = True
     delete_branch_on_merge: bool = False
+
+
+class StalenessFactor(BaseModel):
+    id: str
+    label: str
+    points: float
+    hint: str
 
 
 class RepoInventoryRecord(BaseModel):
@@ -121,6 +129,7 @@ class RepoInventoryRecord(BaseModel):
 
     # Derived metrics
     staleness_score: float = 0.0
+    staleness_factors: list[StalenessFactor] = Field(default_factory=list)
     days_since_last_push: int | None = None
     is_inactive: bool = False
 

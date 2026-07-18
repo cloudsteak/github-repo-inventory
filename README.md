@@ -87,13 +87,15 @@ Outputs:
 
 ### 4. Launch dashboard
 
+After `sync`, inventory files are copied automatically to `dashboard/public/` (disable with `storage.auto_publish_dashboard: false` in config).
+
 ```bash
-mkdir -p dashboard/public
-cp data/inventory.json dashboard/public/inventory.json
 cd dashboard
 npm install
 npm run dev
 ```
+
+Dev mode reads `data/inventory.json` directly; `dashboard/public/` is used for `npm run preview` and `npm run build`.
 
 Open the local Vite URL shown in the terminal.
 

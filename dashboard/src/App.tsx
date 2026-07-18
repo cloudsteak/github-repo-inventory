@@ -20,18 +20,23 @@ import { DEFAULT_VIEWS, loadViews, saveViews } from "./savedViews";
 const COLORS = ["#2563eb", "#7c3aed", "#0891b2", "#059669", "#d97706", "#dc2626", "#64748b"];
 
 async function loadInventory(): Promise<InventorySnapshot> {
-  const candidates = ["./inventory.json", "/inventory.json", "../data/inventory.json"];
-  let lastError: unknown;
-  for (const url of candidates) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) continue;
-      return response.json();
-    } catch (error) {
-      lastError = error;
-    }
+  const response = await fetch("/inventory.json");
+  if (!response.ok) {
+    throw new Error(
+      response.status === 404
+        ? "inventory.json not found. Run: uv run github-repo-inventory sync"
+        : `Failed to load inventory.json (${response.status})`,
+    );
   }
-  throw lastError ?? new Error("Could not load inventory.json");
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new Error(
+      "inventory.json returned HTML instead of JSON. Restart the dev server from dashboard/ after syncing.",
+    );
+  }
+
+  return response.json();
 }
 
 function applyFilters(repos: RepoRecord[], view: SavedView): RepoRecord[] {

@@ -106,6 +106,7 @@ This document lists the repository metadata collected in Phase 1.
 | `days_since_last_push` | Days since `pushed_at` (fallback: `updated_at`) |
 | `is_inactive` | True when inactivity exceeds configured threshold |
 | `staleness_score` | Weighted score from 0 to 100 |
+| `staleness_factors[]` | Breakdown of score contributors (`id`, `label`, `points`, `hint`) |
 
 ## Sync metadata
 

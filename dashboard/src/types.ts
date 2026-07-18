@@ -25,6 +25,7 @@ export interface SecurityFeatures {
   secret_scanning_push_protection_enabled: boolean | null;
   code_scanning_enabled: boolean | null;
   advanced_security_enabled: boolean | null;
+  open_secret_scanning_alert_count: number | null;
 }
 
 export interface MergeSettings {
@@ -44,6 +45,13 @@ export interface TeamAccess {
   slug: string;
   name: string;
   permission: string;
+}
+
+export interface StalenessFactor {
+  id: string;
+  label: string;
+  points: number;
+  hint: string;
 }
 
 export interface RepoRecord {
@@ -84,6 +92,7 @@ export interface RepoRecord {
   security: SecurityFeatures;
   actions_enabled: boolean | null;
   staleness_score: number;
+  staleness_factors?: StalenessFactor[];
   days_since_last_push: number | null;
   is_inactive: boolean;
   fetched_at: string;

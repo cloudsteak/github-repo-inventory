@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/savedviews.ts","./src/types.ts","./src/components/filterbar.tsx","./src/components/repotable.tsx","./src/components/summarycards.tsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/main.tsx","./src/savedviews.ts","./src/staleness.ts","./src/types.ts","./src/components/filterbar.tsx","./src/components/repotable.tsx","./src/components/summarycards.tsx"],"version":"5.9.3"}

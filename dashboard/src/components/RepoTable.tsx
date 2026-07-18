@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { Fragment, useMemo, useState } from "react";
 import { RepoRecord } from "../types";
+import { effectiveStalenessScore, getStalenessFactors, securityStatusLines, stalenessTone } from "../staleness";
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
@@ -64,6 +65,11 @@ export function RepoTable({ repositories }: { repositories: RepoRecord[] }) {
         cell: ({ getValue }) => getValue<string | null>() ?? "—",
       },
       {
+        accessorKey: "created_at",
+        header: "Created",
+        cell: ({ getValue }) => formatDate(getValue<string | null>()),
+      },
+      {
         accessorKey: "pushed_at",
         header: "Last Push",
         cell: ({ getValue }) => formatDate(getValue<string | null>()),
@@ -71,11 +77,7 @@ export function RepoTable({ repositories }: { repositories: RepoRecord[] }) {
       {
         accessorKey: "staleness_score",
         header: "Staleness",
-        cell: ({ getValue }) => {
-          const value = getValue<number>();
-          const tone = value >= 70 ? "danger" : value >= 40 ? "warn" : "ok";
-          return <span className={`score score-${tone}`}>{value.toFixed(0)}</span>;
-        },
+        cell: ({ row }) => <StalenessCell repo={row.original} />,
       },
       {
         id: "details",
@@ -138,9 +140,51 @@ export function RepoTable({ repositories }: { repositories: RepoRecord[] }) {
   );
 }
 
+function StalenessCell({ repo }: { repo: RepoRecord }) {
+  const factors = getStalenessFactors(repo);
+  const score = effectiveStalenessScore(repo);
+  const tone = stalenessTone(score);
+
+  if (factors.length === 0) {
+    return <span className={`score score-${tone}`}>{score.toFixed(0)}</span>;
+  }
+
+  return (
+    <div className="staleness-cell">
+      <span className={`score score-${tone}`} title={factors.map((f) => `${f.label} (+${f.points})`).join("\n")}>
+        {score.toFixed(0)}
+      </span>
+      <ul className="staleness-tags">
+        {factors.map((factor) => (
+          <li key={factor.id} className="staleness-tag" title={factor.hint}>
+            {factor.label} (+{factor.points})
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function RepoDetails({ repo }: { repo: RepoRecord }) {
+  const factors = getStalenessFactors(repo);
+
   return (
     <div className="details-grid">
+      <div className="wide">
+        <h3>Staleness breakdown</h3>
+        {factors.length ? (
+          <ul className="staleness-breakdown">
+            {factors.map((factor) => (
+              <li key={factor.id}>
+                <strong>{factor.label}</strong> (+{factor.points})
+                <p className="muted staleness-hint">{factor.hint}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">No staleness factors — repository looks healthy.</p>
+        )}
+      </div>
       <div>
         <h3>Lifecycle</h3>
         <ul>
@@ -170,14 +214,11 @@ function RepoDetails({ repo }: { repo: RepoRecord }) {
         </ul>
       </div>
       <div>
-        <h3>Security</h3>
-        <ul>
-          <li>Dependabot alerts: {formatNullableBool(repo.security.dependabot_alerts_enabled)}</li>
-          <li>Dependabot updates: {formatNullableBool(repo.security.dependabot_security_updates_enabled)}</li>
-          <li>Secret scanning: {formatNullableBool(repo.security.secret_scanning_enabled)}</li>
-          <li>Code scanning: {formatNullableBool(repo.security.code_scanning_enabled)}</li>
-          <li>Actions enabled: {formatNullableBool(repo.actions_enabled)}</li>
-        </ul>
+        <h3>Security tools (GitHub)</h3>
+        <p className="muted security-intro">
+          Whether GitHub security tools are enabled. Staleness only flags secret scanning when open alerts exist.
+        </p>
+        <SecurityToolsList security={repo.security} />
       </div>
       <div className="wide">
         <h3>Open Pull Requests</h3>
@@ -218,7 +259,17 @@ function RepoDetails({ repo }: { repo: RepoRecord }) {
   );
 }
 
-function formatNullableBool(value: boolean | null): string {
-  if (value === null) return "Unknown";
-  return value ? "Yes" : "No";
+function SecurityToolsList({ security }: { security: RepoRecord["security"] }) {
+  const { status, lines } = securityStatusLines(security);
+
+  return (
+    <>
+      {status === "unknown" ? <p className="warning">Security status unknown — token could not read these settings.</p> : null}
+      <ul>
+        {lines.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </>
+  );
 }

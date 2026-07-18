@@ -463,6 +463,18 @@ class RepoCollector:
             if exc.status_code not in {403, 404}:
                 errors.append(f"code_scanning: {exc}")
 
+        try:
+            alerts = self.client.paginate(
+                f"/repos/{record.full_name}/secret-scanning/alerts",
+                params={"state": "open"},
+            )
+            security.open_secret_scanning_alert_count = len(alerts)
+        except GitHubAPIError as exc:
+            if exc.status_code in {403, 404}:
+                security.open_secret_scanning_alert_count = None
+            else:
+                errors.append(f"secret_scanning_alerts: {exc}")
+
         record.security = security
 
     def _enrich_actions(self, record: RepoInventoryRecord, errors: list[str]) -> None:

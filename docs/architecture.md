@@ -80,7 +80,7 @@ Staleness is a weighted score from 0 to 100 based on:
 - archived repository
 - missing branch protection on the default branch
 - open Dependabot pull requests
-- no major security features enabled
+- open secret scanning alerts (leaked credentials detected — not merely disabled scanning)
 
 Weights are configurable in `config.yaml` under `scoring.weights`.
 

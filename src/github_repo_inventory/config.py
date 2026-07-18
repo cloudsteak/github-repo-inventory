@@ -14,7 +14,7 @@ class ScoringWeights(BaseModel):
     archived: int = 25
     no_branch_protection: int = 20
     open_dependabot_prs: int = 10
-    no_security_features: int = 15
+    open_secret_scanning_alerts: int = 15
 
 
 class ScoringConfig(BaseModel):
@@ -30,7 +30,11 @@ class SyncConfig(BaseModel):
 class StorageConfig(BaseModel):
     database: Path = Path("data/inventory.db")
     json_export: Path = Path("data/inventory.json")
+    csv_export: Path = Path("data/inventory.csv")
     runs_dir: Path = Path("data/runs")
+    auto_publish_dashboard: bool = True
+    dashboard_json: Path = Path("dashboard/public/inventory.json")
+    dashboard_csv: Path = Path("dashboard/public/inventory.csv")
 
 
 class GitHubConfig(BaseModel):
@@ -67,5 +71,8 @@ def resolve_paths(config: AppConfig, project_root: Path) -> AppConfig:
     """Resolve relative storage paths against the project root."""
     config.storage.database = (project_root / config.storage.database).resolve()
     config.storage.json_export = (project_root / config.storage.json_export).resolve()
+    config.storage.csv_export = (project_root / config.storage.csv_export).resolve()
     config.storage.runs_dir = (project_root / config.storage.runs_dir).resolve()
+    config.storage.dashboard_json = (project_root / config.storage.dashboard_json).resolve()
+    config.storage.dashboard_csv = (project_root / config.storage.dashboard_csv).resolve()
     return config
