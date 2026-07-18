@@ -1,0 +1,125 @@
+name: Inventory Sync
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      deploy_pages:
+        description: Deploy dashboard to GitHub Pages
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: inventory-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.INVENTORY_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Create config
+        run: |
+          cat > config.yaml <<'EOF'
+          github:
+            token_env: GITHUB_TOKEN
+            user: ${{ github.repository_owner }}
+            organizations:
+              - ${{ github.repository_owner }}
+            include_forks: true
+            include_archived: true
+          storage:
+            database: data/inventory.db
+            json_export: data/inventory.json
+            runs_dir: data/runs
+          EOF
+
+      - name: Sync inventory
+        # Requires INVENTORY_GITHUB_TOKEN secret (fine-grained PAT) for org-wide discovery.
+        run: uv run github-repo-inventory sync
+
+      - name: Export CSV artifact
+        run: uv run github-repo-inventory export --csv data/inventory.csv
+
+      - name: Upload inventory artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-${{ github.run_id }}
+          path: |
+            data/inventory.json
+            data/inventory.csv
+            data/runs/
+
+      - name: Commit inventory snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/inventory.json data/inventory.csv data/runs/ || true
+          git diff --staged --quiet || git commit -m "chore: update inventory snapshot"
+          git push || true
+
+  deploy-dashboard:
+    needs: sync
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_pages || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download latest inventory
+        uses: actions/download-artifact@v4
+        with:
+          pattern: inventory-*
+          merge-multiple: true
+          path: data
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build dashboard
+        working-directory: dashboard
+        run: |
+          npm ci
+          mkdir -p public
+          cp ../data/inventory.json public/inventory.json
+          npm run build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
