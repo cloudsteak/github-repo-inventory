@@ -161,7 +161,7 @@ Full setup: [docs/authentication.md](docs/authentication.md#github-actions-setup
 1. Create a **fine-grained PAT** with the [permission checklist](docs/authentication.md#required-permissions-fine-grained).
 2. Add it as repository secret **`INVENTORY_GITHUB_TOKEN`** (`Settings` → **Secrets and variables** → **Actions**).
 3. Add **`DASHBOARD_PASSWORD`** for encrypted GitHub Pages deployment.
-4. Update the generated `config.yaml` step in the workflow with your org list, or commit a safe `config.yaml` template and inject orgs via workflow inputs.
+4. Set inventory scope: repository variables **`INVENTORY_USER`** (personal repos) and **`INVENTORY_ORGS`** (comma-separated), or edit the workflow `Create config` step.
 
 If `INVENTORY_GITHUB_TOKEN` is not set, the workflow falls back to the built-in `GITHUB_TOKEN`, which is **not** a PAT and is usually limited to the current repository.
 
@@ -176,7 +176,7 @@ When you fork, clone, or move this project to a **new GitHub repository**, GitHu
 | 3. **GitHub Pages** enabled | Settings → Pages → Source: **GitHub Actions** | Dashboard hosting (`pages-check` job) |
 | 4. Repository **public** (free plan) | Settings → General → visibility | Free GitHub Pages |
 | 5. **`github-pages` environment** | Created automatically on first deploy (or Settings → Environments) | Pages deployment job |
-| 6. **Org list** in workflow | `Create config` step in [inventory.yml](.github/workflows/inventory.yml) | Which orgs/users to scan |
+| 6. **Inventory scope** | Repository variables `INVENTORY_USER` (default: `the1bit`) and `INVENTORY_ORGS` (default: `cloudsteak`) — or edit the workflow `Create config` step | Personal user repos + org repos |
 | 7. **Fine-grained PAT org approval** | Org Settings → Personal access tokens (if org policy requires it) | PAT access to org repos |
 | 8. **First workflow run** | Actions → Inventory Sync → Run workflow | Verify sync + deploy |
 

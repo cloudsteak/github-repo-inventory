@@ -35,13 +35,19 @@ jobs:
         run: uv sync
 
       - name: Create config
+        env:
+          # Personal account repos (PAT owner). Override via repository variable INVENTORY_USER.
+          INVENTORY_USER: ${{ vars.INVENTORY_USER }}
+          # Comma-separated org list. Override via repository variable INVENTORY_ORGS.
+          INVENTORY_ORGS: ${{ vars.INVENTORY_ORGS }}
         run: |
-          cat > config.yaml <<'EOF'
+          ORG_LINES="$(echo "$INVENTORY_ORGS" | tr ',' '\n' | sed '/^[[:space:]]*$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/^/              - /')"
+          cat > config.yaml <<EOF
           github:
             token_env: GITHUB_TOKEN
-            user: ${{ github.repository_owner }}
+            user: ${INVENTORY_USER}
             organizations:
-              - ${{ github.repository_owner }}
+          ${ORG_LINES}
             include_forks: true
             include_archived: true
           storage:
@@ -52,6 +58,7 @@ jobs:
           sync:
             concurrency: 2
           EOF
+          echo "Inventory scope: user=${INVENTORY_USER}, orgs=${INVENTORY_ORGS}"
 
       - name: Sync inventory
         # Requires INVENTORY_GITHUB_TOKEN secret (fine-grained PAT) for org-wide discovery.
