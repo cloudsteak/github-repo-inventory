@@ -9,7 +9,7 @@ Discover, inventory, and visualize GitHub repositories across your user account 
 - **Staleness scoring** to highlight inactive or risky repositories
 - **SQLite history** with timestamped JSON run snapshots and diff support
 - **Interactive dashboard** with filters, saved views, grouping, charts, and export
-- **GitHub Actions workflow** for scheduled sync and optional GitHub Pages deployment
+- **GitHub Actions workflow** for scheduled sync and GitHub Pages deployment
 
 ## Requirements
 
@@ -119,16 +119,30 @@ Behavior:
 - Runs weekly on Monday at 06:00 UTC
 - Supports manual `workflow_dispatch`
 - Commits updated inventory snapshots to the repository
-- Builds and deploys the dashboard to GitHub Pages
+- Builds and deploys the dashboard to GitHub Pages when Pages is enabled
+
+### GitHub Pages setup (public repository)
+
+GitHub Pages on the free plan requires a **public** repository. After making the repo public:
+
+1. **Settings** → **General** → **Danger Zone** → change visibility to **Public** (if not already)
+2. **Settings** → **Pages** → **Build and deployment** → **Source: GitHub Actions**
+3. Run the workflow manually once (or wait for the weekly schedule)
+
+The dashboard will be published at `https://<owner>.github.io/<repo>/`.
+
+Review `data/inventory.json` before going public — it lists repository names, visibility, collaborators, and security metadata for your org.
+
+You can still run the dashboard locally anytime: `cd dashboard && npm install && npm run dev`
 
 ### Action setup
 
 Full setup: [docs/authentication.md](docs/authentication.md#github-actions-setup)
 
-1. Enable GitHub Pages manually (required once): **Settings** → **Pages** → **Build and deployment** → **Source: GitHub Actions**. The workflow token cannot create a Pages site automatically.
-2. Create a **fine-grained PAT** with the [permission checklist](docs/authentication.md#required-permissions-fine-grained).
-3. Add it as repository secret **`INVENTORY_GITHUB_TOKEN`** (`Settings` → `Secrets and variables` → `Actions`).
-4. Update the generated `config.yaml` step in the workflow with your org list, or commit a safe `config.yaml` template and inject orgs via workflow inputs.
+1. Create a **fine-grained PAT** with the [permission checklist](docs/authentication.md#required-permissions-fine-grained).
+2. Add it as repository secret **`INVENTORY_GITHUB_TOKEN`** (`Settings` → **Secrets and variables** → **Actions**).
+3. Update the generated `config.yaml` step in the workflow with your org list, or commit a safe `config.yaml` template and inject orgs via workflow inputs.
+4. Make the repository **public** and enable GitHub Pages (**Settings** → **Pages** → **Source: GitHub Actions**).
 
 If `INVENTORY_GITHUB_TOKEN` is not set, the workflow falls back to the built-in `GITHUB_TOKEN`, which is **not** a PAT and is usually limited to the current repository.
 

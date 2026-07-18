@@ -91,7 +91,7 @@ jobs:
           if gh api "repos/${{ github.repository }}/pages" >/dev/null 2>&1; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice title=GitHub Pages not configured::Enable Pages once under Settings → Pages → Build and deployment → Source: GitHub Actions, then re-run deploy."
+            echo "::notice title=GitHub Pages not enabled yet::Make the repository public, then enable Settings → Pages → Build and deployment → Source: GitHub Actions."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
 
