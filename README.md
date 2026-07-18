@@ -9,7 +9,7 @@ Discover, inventory, and visualize GitHub repositories across your user account 
 - **Staleness scoring** to highlight inactive or risky repositories
 - **SQLite history** with timestamped JSON run snapshots and diff support
 - **Interactive dashboard** with filters, saved views, grouping, charts, and export
-- **GitHub Actions workflow** for scheduled sync (artifacts only — no public publishing)
+- **GitHub Actions workflow** for scheduled sync and password-protected GitHub Pages deployment
 
 ## Requirements
 
@@ -89,13 +89,13 @@ Outputs:
 
 After `sync`, inventory files are copied automatically to `dashboard/public/` (disable with `storage.auto_publish_dashboard: false` in config).
 
-Optional password protection for local preview — add to `.env`:
+Optional password for local dev/preview — add to `.env`:
 
 ```bash
 DASHBOARD_PASSWORD=your-secret-password
 ```
 
-When set, the dev/preview server requires sign-in before serving `inventory.json`. This protects local access only; it does **not** secure public static hosting.
+When set locally, the dev server requires sign-in before serving plain `inventory.json`.
 
 ```bash
 cd dashboard
@@ -126,22 +126,33 @@ Behavior:
 
 - Runs weekly on Monday at 06:00 UTC
 - Supports manual `workflow_dispatch`
-- Uploads inventory snapshots as **private workflow artifacts** (not committed to git)
+- Uploads inventory snapshots as workflow artifacts
+- Deploys a **password-protected** dashboard to GitHub Pages
+
+### Password-protected GitHub Pages
+
+GitHub Pages serves static files only. The pipeline encrypts inventory at **build time** using the **`DASHBOARD_PASSWORD` repository secret** — the password is never committed to git and never embedded in the JavaScript bundle.
+
+| Location | What is stored |
+|----------|----------------|
+| GitHub Secret `DASHBOARD_PASSWORD` | The password (you choose it once) |
+| Pipeline runtime | Secret injected as env var, used to encrypt, then discarded |
+| Published site (`inventory.enc.json`) | Encrypted blob only — useless without the password |
+| Source code / public repo | Encryption **logic** only, not the key |
+
+Someone with the full source code but **without** the secret cannot decrypt the data. They only see the same public `inventory.enc.json` as everyone else.
+
+Flow:
+
+1. Add **`DASHBOARD_PASSWORD`** under **Settings** → **Secrets and variables** → **Actions**
+2. Each workflow run reads the secret, runs `encrypt-inventory.mjs`, deploys only `inventory.enc.json`
+3. Open the Pages URL and enter the same password — the browser decrypts locally
+
+Use a strong, unique password. This protects against casual access; a determined attacker with the encrypted file could still attempt offline cracking of a weak password.
 
 ### Data privacy
 
-Inventory data includes repository names, visibility, collaborators, security settings, and open PRs. Treat it as **internal-only**.
-
-**Do not publish it via GitHub Pages on the free plan.** Pages serves static files to the public internet with no login — anyone can fetch `inventory.json` directly, even if the dashboard UI is hidden.
-
-Recommended setup:
-
-1. Keep this repository **private**
-2. Run the dashboard locally: `cd dashboard && npm install && npm run dev`
-3. Download snapshots from Actions artifacts when needed
-4. Disable GitHub Pages if it was enabled earlier: **Settings** → **Pages** → remove/disable the site
-
-If you previously made the repository public or deployed Pages, switch visibility back to **private** and disable Pages. Note that older commits or cached Pages content may still expose historical snapshots until GitHub clears them.
+Inventory data includes repository names, visibility, collaborators, security settings, and open PRs. Treat it as **internal-only** even when encrypted on Pages.
 
 ### Action setup
 
@@ -149,7 +160,8 @@ Full setup: [docs/authentication.md](docs/authentication.md#github-actions-setup
 
 1. Create a **fine-grained PAT** with the [permission checklist](docs/authentication.md#required-permissions-fine-grained).
 2. Add it as repository secret **`INVENTORY_GITHUB_TOKEN`** (`Settings` → **Secrets and variables** → **Actions**).
-3. Update the generated `config.yaml` step in the workflow with your org list, or commit a safe `config.yaml` template and inject orgs via workflow inputs.
+3. Add **`DASHBOARD_PASSWORD`** for encrypted GitHub Pages deployment.
+4. Update the generated `config.yaml` step in the workflow with your org list, or commit a safe `config.yaml` template and inject orgs via workflow inputs.
 
 If `INVENTORY_GITHUB_TOKEN` is not set, the workflow falls back to the built-in `GITHUB_TOKEN`, which is **not** a PAT and is usually limited to the current repository.
 

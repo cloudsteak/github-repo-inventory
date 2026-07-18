@@ -68,3 +68,62 @@ jobs:
             data/inventory.json
             data/inventory.csv
             data/runs/
+
+  deploy-dashboard:
+    needs: sync
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download latest inventory
+        uses: actions/download-artifact@v4
+        with:
+          pattern: inventory-*
+          merge-multiple: true
+          path: .
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build password-protected dashboard
+        working-directory: dashboard
+        env:
+          # Secret exists only in GitHub Actions — never in git or the built JS bundle.
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+          VITE_ENCRYPTED_INVENTORY: "true"
+        run: |
+          if [ -z "$DASHBOARD_PASSWORD" ]; then
+            echo "::error title=Missing DASHBOARD_PASSWORD secret::Add a repository secret named DASHBOARD_PASSWORD before deploying to GitHub Pages."
+            exit 1
+          fi
+          npm ci
+          node scripts/encrypt-inventory.mjs ../data/inventory.json public/inventory.enc.json
+          rm -f public/inventory.json public/inventory.csv
+          npm run build
+          rm -f dist/inventory.json dist/inventory.csv
+          if grep -R --binary-files=text -E 'DASHBOARD_PASSWORD|github_pat_' dist/; then
+            echo "::error title=Possible secret leak::Built assets contain forbidden patterns."
+            exit 1
+          fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dashboard/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

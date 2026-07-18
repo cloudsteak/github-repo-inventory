@@ -18,58 +18,16 @@ import { FilterBar } from "./components/FilterBar";
 import { LoginGate } from "./components/LoginGate";
 import { DEFAULT_VIEWS, loadViews, saveViews } from "./savedViews";
 import { SummaryCardId, activeCardForView, viewForCard } from "./cardFilters";
+import {
+  AuthRequiredError,
+  encryptedInventoryMode,
+  loadEncryptedInventory,
+  loadPlainInventory,
+  loginWithServer,
+  logoutFromServer,
+} from "./inventoryAccess";
 
 const COLORS = ["#2563eb", "#7c3aed", "#0891b2", "#059669", "#d97706", "#dc2626", "#64748b"];
-const LOGIN_PATH = "/__dashboard/login";
-const LOGOUT_PATH = "/__dashboard/logout";
-
-class AuthRequiredError extends Error {
-  constructor() {
-    super("Authentication required");
-    this.name = "AuthRequiredError";
-  }
-}
-
-async function login(password: string): Promise<void> {
-  const response = await fetch(LOGIN_PATH, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
-    body: JSON.stringify({ password }),
-  });
-  if (!response.ok) {
-    throw new Error("Invalid password");
-  }
-}
-
-async function logout(): Promise<void> {
-  await fetch(LOGOUT_PATH, { method: "POST", credentials: "same-origin" });
-}
-
-async function loadInventory(): Promise<InventorySnapshot> {
-  const response = await fetch(`${import.meta.env.BASE_URL}inventory.json`, {
-    credentials: "same-origin",
-  });
-  if (response.status === 401) {
-    throw new AuthRequiredError();
-  }
-  if (!response.ok) {
-    throw new Error(
-      response.status === 404
-        ? "inventory.json not found. Run: uv run github-repo-inventory sync"
-        : `Failed to load inventory.json (${response.status})`,
-    );
-  }
-
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) {
-    throw new Error(
-      "inventory.json returned HTML instead of JSON. Restart the dev server from dashboard/ after syncing.",
-    );
-  }
-
-  return response.json();
-}
 
 function applyFilters(repos: RepoRecord[], view: SavedView): RepoRecord[] {
   return repos.filter((repo) => {
@@ -144,7 +102,13 @@ export default function App() {
   const [draftView, setDraftView] = useState<SavedView>(DEFAULT_VIEWS[0]);
 
   useEffect(() => {
-    loadInventory()
+    if (encryptedInventoryMode) {
+      setPasswordProtected(true);
+      setNeedsAuth(true);
+      return;
+    }
+
+    loadPlainInventory()
       .then(setSnapshot)
       .catch((err) => {
         if (err instanceof AuthRequiredError) {
@@ -157,16 +121,32 @@ export default function App() {
   }, []);
 
   async function handleLogin(password: string) {
-    await login(password);
+    if (encryptedInventoryMode) {
+      const data = await loadEncryptedInventory(password);
+      setSnapshot(data);
+      setPasswordProtected(true);
+      setNeedsAuth(false);
+      setError(null);
+      return;
+    }
+
+    await loginWithServer(password);
     setPasswordProtected(true);
     setNeedsAuth(false);
     setError(null);
-    const data = await loadInventory();
+    const data = await loadPlainInventory();
     setSnapshot(data);
   }
 
   async function handleLogout() {
-    await logout();
+    if (encryptedInventoryMode) {
+      setSnapshot(null);
+      setNeedsAuth(true);
+      setError(null);
+      return;
+    }
+
+    await logoutFromServer();
     setSnapshot(null);
     setNeedsAuth(true);
     setError(null);
@@ -233,18 +213,14 @@ export default function App() {
 
   function applyCardFilter(cardId: SummaryCardId) {
     if (activeCardForView(draftView) === cardId && cardId !== "all") {
-      cardId = "all";
+      setDraftView(viewForCard("all"));
+      return;
     }
-    const next = viewForCard(cardId);
-    setDraftView(next);
-    const matchingPreset = DEFAULT_VIEWS.find((view) => view.id === cardId);
-    setActiveViewId(matchingPreset ? matchingPreset.id : cardId === "all" ? "all" : `card-${cardId}`);
+    setDraftView(viewForCard(cardId));
   }
 
   function exportJson() {
-    if (!snapshot) return;
-    const payload = { ...snapshot, repositories: filtered };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(filtered, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;

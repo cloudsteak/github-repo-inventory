@@ -106,8 +106,9 @@ The workflow performs:
 2. generate runtime config
 3. run `github-repo-inventory sync`
 4. upload artifacts
+5. encrypt inventory and deploy password-protected dashboard to GitHub Pages
 
-Inventory files are **not** committed to git or deployed to GitHub Pages. Use local `npm run dev` or download Actions artifacts instead.
+Set the **`DASHBOARD_PASSWORD`** repository secret before deploying. The site decrypts data in the browser; plain `inventory.json` is not published.
 
 Use a dedicated PAT secret for org-wide discovery. The default `GITHUB_TOKEN` only has access to the repository that hosts the workflow unless additional permissions are granted.
 

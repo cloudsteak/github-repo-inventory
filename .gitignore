@@ -48,4 +48,5 @@ htmlcov/
 *.log
 **/inventory.csv
 **/inventory.json
+**/inventory.enc.json
 **/inventory.csv

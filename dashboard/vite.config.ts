@@ -44,6 +44,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), dashboardServerPlugin(dashboardPassword)],
     base: "./",
     envDir: path.resolve(__dirname, ".."),
+    // Only VITE_* vars are exposed to browser code. DASHBOARD_PASSWORD stays server/CI-only.
+    envPrefix: ["VITE_"],
     server: {
       fs: {
         allow: [".."],
