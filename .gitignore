@@ -1,0 +1,52 @@
+# Python / uv
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.uv/
+uv.lock
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local config with tokens
+config.yaml
+!config.yaml.example
+
+# Inventory data (generated locally; CI may commit snapshots)
+data/inventory.json
+data/inventory.db
+data/inventory-*.json
+data/runs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Dashboard
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.env
+dashboard/.env.local
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+**/inventory.csv
+**/inventory.json
+**/inventory.csv

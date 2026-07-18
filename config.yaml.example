@@ -1,0 +1,59 @@
+# Copy to config.yaml and customize. Never commit config.yaml with tokens.
+
+github:
+  # Env var name for your fine-grained PAT (github_pat_...). Not the token itself.
+  # Setup: docs/authentication.md
+  token_env: GITHUB_TOKEN
+
+  # Authenticated user login used for viewer permission checks
+  user: your-github-username
+
+  # Organizations to scan (requires fine-grained org permissions — see docs/authentication.md)
+  organizations:
+    - your-org
+
+  # Include forked repositories in the inventory
+  include_forks: true
+
+  # Include archived repositories
+  include_archived: true
+
+  # Optional: additional user accounts to scan (requires access to their repos)
+  additional_users: []
+
+storage:
+  # SQLite database path (relative to project root)
+  database: data/inventory.db
+
+  # JSON export path consumed by the dashboard
+  json_export: data/inventory.json
+
+  # CSV export path
+  csv_export: data/inventory.csv
+
+  # Directory for timestamped run snapshots (used for diff)
+  runs_dir: data/runs
+
+  # After sync/export, copy artifacts for local dashboard preview/build
+  auto_publish_dashboard: true
+  dashboard_json: dashboard/public/inventory.json
+  dashboard_csv: dashboard/public/inventory.csv
+
+sync:
+  # Max concurrent per-repo detail requests (respect GitHub rate limits)
+  concurrency: 5
+
+  # Retry failed repo fetches this many times
+  max_retries: 3
+
+scoring:
+  # Days without a push before inactivity affects staleness score
+  inactive_days_threshold: 365
+
+  # Weight factors for staleness score (0-100 scale output)
+  weights:
+    no_recent_push: 30
+    archived: 25
+    no_branch_protection: 20
+    open_dependabot_prs: 10
+    open_secret_scanning_alerts: 15
