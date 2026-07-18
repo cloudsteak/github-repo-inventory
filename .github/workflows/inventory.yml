@@ -69,8 +69,28 @@ jobs:
             data/inventory.csv
             data/runs/
 
+  pages-check:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: read
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - name: Check GitHub Pages is enabled
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pages" >/dev/null 2>&1; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=GitHub Pages not enabled::Enable Settings → Pages → Build and deployment → Source: GitHub Actions, then re-run."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy-dashboard:
-    needs: sync
+    needs: [sync, pages-check]
+    if: needs.pages-check.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -165,6 +165,25 @@ Full setup: [docs/authentication.md](docs/authentication.md#github-actions-setup
 
 If `INVENTORY_GITHUB_TOKEN` is not set, the workflow falls back to the built-in `GITHUB_TOKEN`, which is **not** a PAT and is usually limited to the current repository.
 
+### New repository checklist
+
+When you fork, clone, or move this project to a **new GitHub repository**, GitHub does **not** copy secrets, Pages settings, or environments. Set these up again:
+
+| Step | Where | Required for |
+|------|-------|--------------|
+| 1. **`INVENTORY_GITHUB_TOKEN`** secret | Settings → Secrets and variables → Actions | Org-wide inventory sync |
+| 2. **`DASHBOARD_PASSWORD`** secret | Settings → Secrets and variables → Actions | Encrypted Pages deploy |
+| 3. **GitHub Pages** enabled | Settings → Pages → Source: **GitHub Actions** | Dashboard hosting (`pages-check` job) |
+| 4. Repository **public** (free plan) | Settings → General → visibility | Free GitHub Pages |
+| 5. **`github-pages` environment** | Created automatically on first deploy (or Settings → Environments) | Pages deployment job |
+| 6. **Org list** in workflow | `Create config` step in [inventory.yml](.github/workflows/inventory.yml) | Which orgs/users to scan |
+| 7. **Fine-grained PAT org approval** | Org Settings → Personal access tokens (if org policy requires it) | PAT access to org repos |
+| 8. **First workflow run** | Actions → Inventory Sync → Run workflow | Verify sync + deploy |
+
+Until step 3 is done, the **`pages-check`** job logs a notice and **`deploy-dashboard` is skipped** — sync and artifacts still work.
+
+Dashboard URL after deploy: `https://<owner>.github.io/<repo>/` (sign in with the same password as `DASHBOARD_PASSWORD`).
+
 ## Project layout
 
 ```text

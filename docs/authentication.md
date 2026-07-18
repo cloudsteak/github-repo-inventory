@@ -133,7 +133,10 @@ GITHUB_TOKEN: ${{ secrets.INVENTORY_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 | Secret | Value | Notes |
 |--------|-------|-------|
 | **`INVENTORY_GITHUB_TOKEN`** | Fine-grained PAT | **Required for org-wide inventory** |
+| **`DASHBOARD_PASSWORD`** | Strong password you choose | Encrypts inventory for GitHub Pages; not stored in git |
 | (built-in) `GITHUB_TOKEN` | Workflow token | Fallback only; usually cannot read private org repos |
+
+Secrets are **not** copied when you fork or move the repo — re-create them in the new repository.
 
 ### Add the fine-grained PAT as a secret
 
@@ -144,6 +147,15 @@ GITHUB_TOKEN: ${{ secrets.INVENTORY_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 5. Save
 
 Use the same permission checklist as for local development.
+
+### GitHub Pages (new repository)
+
+1. Make the repository **public** (required on the free plan for Pages).
+2. **Settings** → **Pages** → **Build and deployment** → **Source: GitHub Actions**
+3. Add the **`DASHBOARD_PASSWORD`** repository secret (same password you use to sign in on the site).
+4. Run the workflow — the **`pages-check`** job verifies Pages is enabled before deploy.
+
+If Pages is not enabled, deploy is skipped with a notice; sync and artifacts still run.
 
 ## Troubleshooting
 
