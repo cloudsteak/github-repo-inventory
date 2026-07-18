@@ -21,7 +21,7 @@ import { SummaryCardId, activeCardForView, viewForCard } from "./cardFilters";
 const COLORS = ["#2563eb", "#7c3aed", "#0891b2", "#059669", "#d97706", "#dc2626", "#64748b"];
 
 async function loadInventory(): Promise<InventorySnapshot> {
-  const response = await fetch("/inventory.json");
+  const response = await fetch(`${import.meta.env.BASE_URL}inventory.json`);
   if (!response.ok) {
     throw new Error(
       response.status === 404
