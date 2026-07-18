@@ -130,5 +130,6 @@ export interface SavedView {
   dependabotOnly: boolean;
   inactiveOnly: boolean;
   unprotectedOnly: boolean;
+  partialOnly: boolean;
   groupBy: string;
 }

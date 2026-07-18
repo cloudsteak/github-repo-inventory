@@ -124,6 +124,15 @@ export function FilterBar({
           />
           Inactive only
         </label>
+
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={draftView.partialOnly ?? false}
+            onChange={(event) => onChange({ partialOnly: event.target.checked })}
+          />
+          Partial sync only
+        </label>
       </div>
 
       <div className="filters-actions">

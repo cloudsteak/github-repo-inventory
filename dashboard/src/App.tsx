@@ -16,6 +16,7 @@ import { RepoTable } from "./components/RepoTable";
 import { SummaryCards } from "./components/SummaryCards";
 import { FilterBar } from "./components/FilterBar";
 import { DEFAULT_VIEWS, loadViews, saveViews } from "./savedViews";
+import { SummaryCardId, activeCardForView, viewForCard } from "./cardFilters";
 
 const COLORS = ["#2563eb", "#7c3aed", "#0891b2", "#059669", "#d97706", "#dc2626", "#64748b"];
 
@@ -65,6 +66,7 @@ function applyFilters(repos: RepoRecord[], view: SavedView): RepoRecord[] {
     if (view.dependabotOnly && !repo.open_pull_requests.some((pr) => pr.is_dependabot)) return false;
     if (view.inactiveOnly && !repo.is_inactive) return false;
     if (view.unprotectedOnly && repo.branch_protection.enabled) return false;
+    if (view.partialOnly && !repo.partial) return false;
     return true;
   });
 }
@@ -173,6 +175,16 @@ export default function App() {
     setActiveViewId(draftView.id);
   }
 
+  function applyCardFilter(cardId: SummaryCardId) {
+    if (activeCardForView(draftView) === cardId && cardId !== "all") {
+      cardId = "all";
+    }
+    const next = viewForCard(cardId);
+    setDraftView(next);
+    const matchingPreset = DEFAULT_VIEWS.find((view) => view.id === cardId);
+    setActiveViewId(matchingPreset ? matchingPreset.id : cardId === "all" ? "all" : `card-${cardId}`);
+  }
+
   function exportJson() {
     if (!snapshot) return;
     const payload = { ...snapshot, repositories: filtered };
@@ -252,7 +264,13 @@ export default function App() {
         </div>
       </header>
 
-      <SummaryCards repos={filtered} summary={snapshot.summary} />
+      <SummaryCards
+        repos={filtered}
+        allRepos={snapshot.repositories}
+        summary={snapshot.summary}
+        draftView={draftView}
+        onCardClick={applyCardFilter}
+      />
 
       <section className="charts-grid">
         <article className="panel chart-panel">

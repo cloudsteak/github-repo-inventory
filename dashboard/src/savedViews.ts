@@ -7,7 +7,8 @@ export function loadViews(): SavedView[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_VIEWS;
     const parsed = JSON.parse(raw) as SavedView[];
-    return parsed.length ? parsed : DEFAULT_VIEWS;
+    if (!parsed.length) return DEFAULT_VIEWS;
+    return parsed.map((view) => ({ ...DEFAULT_VIEWS[0], ...view }));
   } catch {
     return DEFAULT_VIEWS;
   }
@@ -30,6 +31,7 @@ export const DEFAULT_VIEWS: SavedView[] = [
     dependabotOnly: false,
     inactiveOnly: false,
     unprotectedOnly: false,
+    partialOnly: false,
     groupBy: "none",
   },
   {
@@ -44,6 +46,7 @@ export const DEFAULT_VIEWS: SavedView[] = [
     dependabotOnly: true,
     inactiveOnly: false,
     unprotectedOnly: false,
+    partialOnly: false,
     groupBy: "source",
   },
   {
@@ -58,6 +61,7 @@ export const DEFAULT_VIEWS: SavedView[] = [
     dependabotOnly: false,
     inactiveOnly: true,
     unprotectedOnly: false,
+    partialOnly: false,
     groupBy: "source",
   },
   {
@@ -72,6 +76,7 @@ export const DEFAULT_VIEWS: SavedView[] = [
     dependabotOnly: false,
     inactiveOnly: false,
     unprotectedOnly: true,
+    partialOnly: false,
     groupBy: "visibility",
   },
 ];
