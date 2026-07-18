@@ -13,8 +13,8 @@ if (!password) {
   process.exit(1);
 }
 
-const inputPath = inputArg ?? path.resolve("..", "data/inventory.json");
-const outputPath = outputArg ?? path.resolve("public/inventory.enc.json");
+const inputPath = path.resolve(inputArg ?? path.join("..", "data", "inventory.json"));
+const outputPath = path.resolve(outputArg ?? path.join("public", "inventory.enc.json"));
 
 if (!fs.existsSync(inputPath)) {
   console.error(`Input file not found: ${inputPath}`);

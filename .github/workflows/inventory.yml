@@ -103,12 +103,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Download latest inventory
+      - name: Download inventory from this run
         uses: actions/download-artifact@v4
         with:
-          pattern: inventory-*
-          merge-multiple: true
+          name: inventory-${{ github.run_id }}
           path: .
+
+      - name: Locate inventory.json
+        id: inventory
+        run: |
+          if [ -f data/inventory.json ]; then
+            echo "path=$GITHUB_WORKSPACE/data/inventory.json" >> "$GITHUB_OUTPUT"
+          elif [ -f inventory.json ]; then
+            echo "path=$GITHUB_WORKSPACE/inventory.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error title=Inventory artifact missing::Expected data/inventory.json after download."
+            find . -name inventory.json -not -path './dashboard/*' || true
+            ls -laR . | head -80 || true
+            exit 1
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -127,7 +140,7 @@ jobs:
             exit 1
           fi
           npm ci
-          node scripts/encrypt-inventory.mjs ../data/inventory.json public/inventory.enc.json
+          node scripts/encrypt-inventory.mjs "${{ steps.inventory.outputs.path }}" "$GITHUB_WORKSPACE/dashboard/public/inventory.enc.json"
           rm -f public/inventory.json public/inventory.csv
           npm run build
           rm -f dist/inventory.json dist/inventory.csv
