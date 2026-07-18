@@ -82,8 +82,10 @@ def sync(ctx: click.Context) -> None:
     token = _get_token(config)
 
     with GitHubClient(token, max_retries=config.sync.max_retries) as client:
-        authenticated_user = client.get_authenticated_login()
-        if not config.github.user:
+        if config.github.user:
+            authenticated_user = config.github.user
+        else:
+            authenticated_user = client.get_authenticated_login()
             config.github.user = authenticated_user
 
         console.print(f"[bold]Syncing repositories for[/bold] {config.github.user}")

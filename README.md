@@ -15,7 +15,7 @@ Discover, inventory, and visualize GitHub repositories across your user account 
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/)
-- Node.js 20+ for the dashboard
+- Node.js 22+ for the dashboard
 - GitHub **fine-grained PAT** — see [Authentication guide](docs/authentication.md)
 
 ## Quick start
@@ -125,7 +125,7 @@ Behavior:
 
 Full setup: [docs/authentication.md](docs/authentication.md#github-actions-setup)
 
-1. Enable GitHub Pages for the repository (`Settings` → `Pages` → GitHub Actions).
+1. Enable GitHub Pages for the repository — the workflow sets `enablement: true` on first deploy to turn this on automatically. If your org blocks that, enable it manually: **Settings** → **Pages** → **Source: GitHub Actions**.
 2. Create a **fine-grained PAT** with the [permission checklist](docs/authentication.md#required-permissions-fine-grained).
 3. Add it as repository secret **`INVENTORY_GITHUB_TOKEN`** (`Settings` → `Secrets and variables` → `Actions`).
 4. Update the generated `config.yaml` step in the workflow with your org list, or commit a safe `config.yaml` template and inject orgs via workflow inputs.
