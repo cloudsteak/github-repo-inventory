@@ -10,11 +10,6 @@ on:
         type: boolean
         default: true
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-
 concurrency:
   group: inventory-sync
   cancel-in-progress: false
@@ -22,6 +17,8 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       GITHUB_TOKEN: ${{ secrets.INVENTORY_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
@@ -79,10 +76,36 @@ jobs:
           git diff --staged --quiet || git commit -m "chore: update inventory snapshot"
           git push || true
 
-  deploy-dashboard:
-    needs: sync
-    if: github.event_name == 'workflow_dispatch' && inputs.deploy_pages || github.event_name == 'schedule'
+  pages-check:
     runs-on: ubuntu-latest
+    permissions:
+      pages: read
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - name: Check GitHub Pages is enabled
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pages" >/dev/null 2>&1; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=GitHub Pages not configured::Enable Pages once under Settings → Pages → Build and deployment → Source: GitHub Actions, then re-run deploy."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy-dashboard:
+    needs: [sync, pages-check]
+    if: >-
+      needs.pages-check.outputs.enabled == 'true'
+      && (github.event_name == 'schedule'
+      || (github.event_name == 'workflow_dispatch' && inputs.deploy_pages))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -113,9 +136,7 @@ jobs:
           npm run build
 
       - name: Configure Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
