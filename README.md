@@ -9,7 +9,7 @@ Discover, inventory, and visualize GitHub repositories across your user account 
 - **Staleness scoring** to highlight inactive or risky repositories
 - **SQLite history** with timestamped JSON run snapshots and diff support
 - **Interactive dashboard** with filters, saved views, grouping, charts, and export
-- **GitHub Actions workflow** for scheduled sync and GitHub Pages deployment
+- **GitHub Actions workflow** for scheduled sync (artifacts only — no public publishing)
 
 ## Requirements
 
@@ -89,6 +89,14 @@ Outputs:
 
 After `sync`, inventory files are copied automatically to `dashboard/public/` (disable with `storage.auto_publish_dashboard: false` in config).
 
+Optional password protection for local preview — add to `.env`:
+
+```bash
+DASHBOARD_PASSWORD=your-secret-password
+```
+
+When set, the dev/preview server requires sign-in before serving `inventory.json`. This protects local access only; it does **not** secure public static hosting.
+
 ```bash
 cd dashboard
 npm install
@@ -118,22 +126,22 @@ Behavior:
 
 - Runs weekly on Monday at 06:00 UTC
 - Supports manual `workflow_dispatch`
-- Commits updated inventory snapshots to the repository
-- Builds and deploys the dashboard to GitHub Pages when Pages is enabled
+- Uploads inventory snapshots as **private workflow artifacts** (not committed to git)
 
-### GitHub Pages setup (public repository)
+### Data privacy
 
-GitHub Pages on the free plan requires a **public** repository. After making the repo public:
+Inventory data includes repository names, visibility, collaborators, security settings, and open PRs. Treat it as **internal-only**.
 
-1. **Settings** → **General** → **Danger Zone** → change visibility to **Public** (if not already)
-2. **Settings** → **Pages** → **Build and deployment** → **Source: GitHub Actions**
-3. Run the workflow manually once (or wait for the weekly schedule)
+**Do not publish it via GitHub Pages on the free plan.** Pages serves static files to the public internet with no login — anyone can fetch `inventory.json` directly, even if the dashboard UI is hidden.
 
-The dashboard will be published at `https://<owner>.github.io/<repo>/`.
+Recommended setup:
 
-Review `data/inventory.json` before going public — it lists repository names, visibility, collaborators, and security metadata for your org.
+1. Keep this repository **private**
+2. Run the dashboard locally: `cd dashboard && npm install && npm run dev`
+3. Download snapshots from Actions artifacts when needed
+4. Disable GitHub Pages if it was enabled earlier: **Settings** → **Pages** → remove/disable the site
 
-You can still run the dashboard locally anytime: `cd dashboard && npm install && npm run dev`
+If you previously made the repository public or deployed Pages, switch visibility back to **private** and disable Pages. Note that older commits or cached Pages content may still expose historical snapshots until GitHub clears them.
 
 ### Action setup
 
@@ -142,7 +150,6 @@ Full setup: [docs/authentication.md](docs/authentication.md#github-actions-setup
 1. Create a **fine-grained PAT** with the [permission checklist](docs/authentication.md#required-permissions-fine-grained).
 2. Add it as repository secret **`INVENTORY_GITHUB_TOKEN`** (`Settings` → **Secrets and variables** → **Actions**).
 3. Update the generated `config.yaml` step in the workflow with your org list, or commit a safe `config.yaml` template and inject orgs via workflow inputs.
-4. Make the repository **public** and enable GitHub Pages (**Settings** → **Pages** → **Source: GitHub Actions**).
 
 If `INVENTORY_GITHUB_TOKEN` is not set, the workflow falls back to the built-in `GITHUB_TOKEN`, which is **not** a PAT and is usually limited to the current repository.
 

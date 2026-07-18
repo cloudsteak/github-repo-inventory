@@ -26,11 +26,48 @@ body {
 }
 
 .loading,
-.error-panel {
+.error-panel,
+.login-panel {
   min-height: 60vh;
   display: grid;
   place-content: center;
   text-align: center;
+}
+
+.login-form {
+  display: grid;
+  gap: 0.75rem;
+  width: min(100%, 320px);
+  margin: 1.5rem auto 0;
+  text-align: left;
+}
+
+.login-form label {
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.8);
+  color: inherit;
+}
+
+.login-form button {
+  justify-self: start;
+}
+
+.login-error {
+  color: #fca5a5;
+  margin-top: 1rem;
+}
+
+button.secondary {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.35);
 }
 
 .hero,

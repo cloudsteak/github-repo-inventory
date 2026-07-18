@@ -1,13 +1,24 @@
 import fs from "node:fs";
 import path from "node:path";
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { installDashboardAuth, isAuthenticated, protectInventoryPath } from "./vite-auth";
 
-function inventoryJsonDevServer(): Plugin {
+function dashboardServerPlugin(dashboardPassword: string | undefined): Plugin {
   return {
-    name: "inventory-json-dev-server",
+    name: "dashboard-server",
     configureServer(server) {
-      server.middlewares.use("/inventory.json", (_req, res) => {
+      installDashboardAuth(server.middlewares, dashboardPassword);
+      server.middlewares.use((req, res, next) => {
+        const pathname = (req.url ?? "/").split("?")[0] || "/";
+        if (!protectInventoryPath(pathname)) {
+          next();
+          return;
+        }
+        if (!isAuthenticated(req, dashboardPassword)) {
+          next();
+          return;
+        }
         const inventoryPath = path.resolve(server.config.root, "../data/inventory.json");
         if (!fs.existsSync(inventoryPath)) {
           res.statusCode = 404;
@@ -19,15 +30,24 @@ function inventoryJsonDevServer(): Plugin {
         fs.createReadStream(inventoryPath).pipe(res);
       });
     },
+    configurePreviewServer(server) {
+      installDashboardAuth(server.middlewares, dashboardPassword);
+    },
   };
 }
 
-export default defineConfig({
-  plugins: [react(), inventoryJsonDevServer()],
-  base: "./",
-  server: {
-    fs: {
-      allow: [".."],
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, path.resolve(__dirname, ".."), "");
+  const dashboardPassword = env.DASHBOARD_PASSWORD || undefined;
+
+  return {
+    plugins: [react(), dashboardServerPlugin(dashboardPassword)],
+    base: "./",
+    envDir: path.resolve(__dirname, ".."),
+    server: {
+      fs: {
+        allow: [".."],
+      },
     },
-  },
+  };
 });

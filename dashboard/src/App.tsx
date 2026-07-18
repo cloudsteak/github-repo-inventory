@@ -15,13 +15,44 @@ import { InventorySnapshot, RepoRecord, SavedView } from "./types";
 import { RepoTable } from "./components/RepoTable";
 import { SummaryCards } from "./components/SummaryCards";
 import { FilterBar } from "./components/FilterBar";
+import { LoginGate } from "./components/LoginGate";
 import { DEFAULT_VIEWS, loadViews, saveViews } from "./savedViews";
 import { SummaryCardId, activeCardForView, viewForCard } from "./cardFilters";
 
 const COLORS = ["#2563eb", "#7c3aed", "#0891b2", "#059669", "#d97706", "#dc2626", "#64748b"];
+const LOGIN_PATH = "/__dashboard/login";
+const LOGOUT_PATH = "/__dashboard/logout";
+
+class AuthRequiredError extends Error {
+  constructor() {
+    super("Authentication required");
+    this.name = "AuthRequiredError";
+  }
+}
+
+async function login(password: string): Promise<void> {
+  const response = await fetch(LOGIN_PATH, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ password }),
+  });
+  if (!response.ok) {
+    throw new Error("Invalid password");
+  }
+}
+
+async function logout(): Promise<void> {
+  await fetch(LOGOUT_PATH, { method: "POST", credentials: "same-origin" });
+}
 
 async function loadInventory(): Promise<InventorySnapshot> {
-  const response = await fetch(`${import.meta.env.BASE_URL}inventory.json`);
+  const response = await fetch(`${import.meta.env.BASE_URL}inventory.json`, {
+    credentials: "same-origin",
+  });
+  if (response.status === 401) {
+    throw new AuthRequiredError();
+  }
   if (!response.ok) {
     throw new Error(
       response.status === 404
@@ -106,6 +137,8 @@ function groupRepos(repos: RepoRecord[], groupBy: string): Record<string, RepoRe
 export default function App() {
   const [snapshot, setSnapshot] = useState<InventorySnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsAuth, setNeedsAuth] = useState(false);
+  const [passwordProtected, setPasswordProtected] = useState(false);
   const [views, setViews] = useState<SavedView[]>(() => loadViews());
   const [activeViewId, setActiveViewId] = useState(DEFAULT_VIEWS[0].id);
   const [draftView, setDraftView] = useState<SavedView>(DEFAULT_VIEWS[0]);
@@ -113,8 +146,31 @@ export default function App() {
   useEffect(() => {
     loadInventory()
       .then(setSnapshot)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load inventory"));
+      .catch((err) => {
+        if (err instanceof AuthRequiredError) {
+          setPasswordProtected(true);
+          setNeedsAuth(true);
+          return;
+        }
+        setError(err instanceof Error ? err.message : "Failed to load inventory");
+      });
   }, []);
+
+  async function handleLogin(password: string) {
+    await login(password);
+    setPasswordProtected(true);
+    setNeedsAuth(false);
+    setError(null);
+    const data = await loadInventory();
+    setSnapshot(data);
+  }
+
+  async function handleLogout() {
+    await logout();
+    setSnapshot(null);
+    setNeedsAuth(true);
+    setError(null);
+  }
 
   const filtered = useMemo(
     () => (snapshot ? applyFilters(snapshot.repositories, draftView) : []),
@@ -231,6 +287,10 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  if (needsAuth) {
+    return <LoginGate onLogin={handleLogin} />;
+  }
+
   if (error) {
     return (
       <div className="page">
@@ -261,6 +321,11 @@ export default function App() {
         <div className="hero-actions">
           <button type="button" onClick={exportCsv}>Export CSV</button>
           <button type="button" onClick={exportJson}>Export JSON</button>
+          {passwordProtected ? (
+            <button type="button" className="secondary" onClick={handleLogout}>
+              Sign out
+            </button>
+          ) : null}
         </div>
       </header>
 
