@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from typing import Any
 
@@ -39,6 +40,8 @@ class GitHubClient:
             "X-GitHub-Api-Version": "2022-11-28",
         }
         self._client = httpx.Client(timeout=60.0, headers=self._headers)
+        self._rate_limit_lock = threading.Lock()
+        self._last_rate_limit_reset = 0
 
     def close(self) -> None:
         self._client.close()
@@ -49,13 +52,57 @@ class GitHubClient:
     def __exit__(self, *args: object) -> None:
         self.close()
 
-    def _handle_rate_limit(self, response: httpx.Response) -> None:
+    @staticmethod
+    def _response_message(response: httpx.Response) -> str:
+        try:
+            payload = response.json()
+            if isinstance(payload, dict):
+                message = payload.get("message")
+                if isinstance(message, str):
+                    return message.lower()
+        except ValueError:
+            pass
+        return response.text.lower()
+
+    def _is_rate_limit_response(self, response: httpx.Response) -> bool:
+        if response.status_code == 429:
+            return True
+
+        if response.status_code != 403:
+            return False
+
         remaining = response.headers.get("X-RateLimit-Remaining")
         if remaining == "0":
-            reset = int(response.headers.get("X-RateLimit-Reset", "0"))
-            sleep_for = max(0, reset - int(time.time())) + 1
+            return True
+
+        message = self._response_message(response)
+        return "rate limit" in message or "secondary rate limit" in message
+
+    def _sleep_for_rate_limit(self, response: httpx.Response) -> None:
+        retry_after = response.headers.get("Retry-After")
+        if retry_after and retry_after.isdigit():
+            sleep_for = int(retry_after) + 1
+            reset_at = int(time.time()) + sleep_for
+        else:
+            reset_at = int(response.headers.get("X-RateLimit-Reset", "0"))
+            sleep_for = max(0, reset_at - int(time.time())) + 1
+
+        with self._rate_limit_lock:
+            if reset_at <= self._last_rate_limit_reset:
+                return
+            self._last_rate_limit_reset = reset_at
             logger.warning("Rate limit reached, sleeping for %s seconds", sleep_for)
             time.sleep(sleep_for)
+
+    def _throttle_from_headers(self, response: httpx.Response) -> None:
+        remaining_hdr = response.headers.get("X-RateLimit-Remaining")
+        if not remaining_hdr or not remaining_hdr.isdigit():
+            return
+        remaining = int(remaining_hdr)
+        if remaining < 50:
+            time.sleep(1.0)
+        elif remaining < 200:
+            time.sleep(0.2)
 
     @retry(
         retry=retry_if_exception_type((httpx.HTTPError, GitHubRateLimitError)),
@@ -75,8 +122,8 @@ class GitHubClient:
         url = path if path.startswith("http") else f"{self.REST_BASE}{path}"
         response = self._client.request(method, url, params=params, json=json)
 
-        if response.status_code == 403 and "rate limit" in response.text.lower():
-            self._handle_rate_limit(response)
+        if self._is_rate_limit_response(response):
+            self._sleep_for_rate_limit(response)
             raise GitHubRateLimitError("GitHub rate limit exceeded")
 
         if isinstance(expected_status, int):
@@ -89,6 +136,8 @@ class GitHubClient:
                 f"GitHub API {method} {path} failed: {response.status_code} {response.text[:300]}",
                 status_code=response.status_code,
             )
+
+        self._throttle_from_headers(response)
         return response
 
     def get_json(

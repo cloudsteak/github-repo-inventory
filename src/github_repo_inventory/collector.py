@@ -402,7 +402,7 @@ class RepoCollector:
                 normalized.append(Collaborator(login=item["login"], permission=permission))
             record.collaborators = normalized
         except GitHubAPIError as exc:
-            if exc.status_code != 404:
+            if exc.status_code not in {403, 404}:
                 errors.append(f"collaborators: {exc}")
 
     def _enrich_teams(self, record: RepoInventoryRecord, errors: list[str]) -> None:
@@ -415,7 +415,7 @@ class RepoCollector:
                 for team in teams or []
             ]
         except GitHubAPIError as exc:
-            if exc.status_code != 404:
+            if exc.status_code not in {403, 404}:
                 errors.append(f"teams: {exc}")
 
     def _enrich_security(self, record: RepoInventoryRecord, errors: list[str]) -> None:
@@ -423,12 +423,12 @@ class RepoCollector:
         owner, name = record.full_name.split("/", 1)
 
         try:
-            self.client.request("GET", f"/repos/{record.full_name}/vulnerability-alerts", expected_status=(204, 404))
+            self.client.request("GET", f"/repos/{record.full_name}/vulnerability-alerts", expected_status=(204, 404, 403))
             security.dependabot_alerts_enabled = True
         except GitHubAPIError as exc:
             if exc.status_code == 404:
                 security.dependabot_alerts_enabled = False
-            else:
+            elif exc.status_code != 403:
                 errors.append(f"dependabot_alerts: {exc}")
 
         try:
@@ -479,10 +479,13 @@ class RepoCollector:
 
     def _enrich_actions(self, record: RepoInventoryRecord, errors: list[str]) -> None:
         try:
-            actions = self.client.get_json(f"/repos/{record.full_name}/actions/permissions", expected_status=(200, 404))
+            actions = self.client.get_json(
+                f"/repos/{record.full_name}/actions/permissions",
+                expected_status=(200, 404, 403),
+            )
             record.actions_enabled = actions.get("enabled") if actions else None
         except GitHubAPIError as exc:
-            if exc.status_code != 404:
+            if exc.status_code not in {403, 404}:
                 errors.append(f"actions: {exc}")
 
     def _enrich_default_merge_method(self, record: RepoInventoryRecord, errors: list[str]) -> None:

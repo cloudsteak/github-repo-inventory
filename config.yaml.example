@@ -40,8 +40,8 @@ storage:
   dashboard_csv: dashboard/public/inventory.csv
 
 sync:
-  # Max concurrent per-repo detail requests (respect GitHub rate limits)
-  concurrency: 5
+  # Max concurrent per-repo detail requests (lower = fewer 403/rate-limit issues)
+  concurrency: 2
 
   # Retry failed repo fetches this many times
   max_retries: 3

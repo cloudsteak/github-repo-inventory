@@ -53,6 +53,8 @@ jobs:
             database: data/inventory.db
             json_export: data/inventory.json
             runs_dir: data/runs
+          sync:
+            concurrency: 2
           EOF
 
       - name: Sync inventory
